@@ -575,7 +575,7 @@ function applyServerScores(serverScores) {
     const gm = bk.games[gk];
     if (!gm) return;
     if (typeof s.sc1 !== 'number' || typeof s.sc2 !== 'number') return;
-    if (gm.done && gm.sc1 === s.sc1 && gm.sc2 === s.sc2) return;
+    if (gm.done) return; // never overwrite a completed game
     gm.sc1  = s.sc1;
     gm.sc2  = s.sc2;
     gm.done = s.final !== false;
