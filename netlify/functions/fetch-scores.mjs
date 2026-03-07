@@ -1,165 +1,147 @@
 // netlify/functions/fetch-scores.mjs
-// Runs every 10 minutes via Netlify scheduled functions
-// Fetches MileHighPrepReport and MaxPreps, parses 1A/2A scores, writes scores.json to /public
+// Scheduled every 5 minutes — fetches all 4 CHSAA bracket pages,
+// parses game scores, and writes results to Netlify Blobs.
 
 import { schedule } from "@netlify/functions";
+import { getStore } from "@netlify/blobs";
 
+// ─── CHSAA SOURCE URLS ────────────────────────────────────────────────────
 const SOURCES = {
-  boys_today: "https://milehighprepreport.com/2026/03/07/boys-basketball-regional-schedule-results-class-1a-thru-4a-saturday/",
-  girls_today: "https://milehighprepreport.com/2026/03/07/girls-basketball-regional-schedule-results-class-1a-thru-4a-saturday/",
-  boys_fri: "https://milehighprepreport.com/2026/03/06/boys-basketball-regional-schedule-results-class-1a-thru-4a-updated-3-6-11pm/",
-  girls_fri: "https://milehighprepreport.com/2026/03/06/girls-basketball-regional-schedule-results-class-1a-thru-4a-updated-3-6-11pm/",
+  b2a: "https://chsaa.co/basketball/2026/boys/2A",
+  g2a: "https://chsaa.co/basketball/2026/girls/2A",
+  b1a: "https://chsaa.co/basketball/2026/boys/1A",
+  g1a: "https://chsaa.co/basketball/2026/girls/1A",
 };
 
-// Known game matchups — used to match parsed scores back to game IDs
-const GAME_MATCHUPS = {
-  // Boys 2A Sweet 16
-  "b2a-G17": ["Sanford", "Center"],
-  "b2a-G18": ["Merino", "Limon"],
-  "b2a-G19": ["Plateau Valley", "Akron"],
-  "b2a-G20": ["Golden View Classical", "Front Range Christian"],
-  "b2a-G21": ["Simla", "Caprock Academy"],
-  "b2a-G22": ["Vail Christian", "Haxtun"],
-  "b2a-G23": ["Heritage Christian", "Campion Academy"],
-  "b2a-G24": ["Byers", "Swallows Charter"],
-  // Girls 2A Sweet 16
-  "g2a-G17": ["Merino", "Center"],
-  "g2a-G18": ["Akron", "James Irwin"],
-  "g2a-G19": ["Sargent", "Hoehne"],
-  "g2a-G20": ["Sedgwick County", "Calhan"],
-  "g2a-G21": ["Simla", "Dayspring Christian"],
-  "g2a-G22": ["Heritage Christian", "Holyoke"],
-  "g2a-G23": ["Sanford", "Swink"],
-  "g2a-G24": ["Plateau Valley", "Del Norte"],
-  // Boys 1A Sweet 16
-  "b1a-G17": ["McClave", "Granada"],
-  "b1a-G18": ["Elbert", "Otis"],
-  "b1a-G19": ["Flatirons Academy", "Holly"],
-  "b1a-G20": ["Stratton", "Sangre de Cristo"],
-  "b1a-G21": ["Nucla", "De Beque"],
-  "b1a-G22": ["Denver Waldorf", "Sierra Grande"],
-  "b1a-G23": ["Cheyenne Wells", "Wiley"],
-  // Girls 1A Sweet 16
-  "g1a-G17": ["McClave", "Granada"],
-  "g1a-G19": ["Stratton", "Genoa-Hugo/Karval"],
-  "g1a-G20": ["Fleming", "Idalia"],
-  "g1a-G23": ["Evangel Christian", "Flagler"],
-  "g1a-G24": ["Nucla", "Briggsdale"],
-};
+// ─── PARSE ONE CHSAA BRACKET PAGE ────────────────────────────────────────
+// CHSAA renders each game as an anchor tag. Completed games have scores
+// embedded as plain text numbers inside the block. The structure is:
+//   G{N} {date} {seed1}{team1} {score1} {seed2}{team2} {score2}
+// Incomplete games show "W{N}" placeholders instead of scores.
 
-function normName(s) {
-  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-function teamMatch(a, b) {
-  const na = normName(a), nb = normName(b);
-  if (!na || !nb) return false;
-  return na === nb || na.includes(nb) || nb.includes(na);
-}
-
-// Parse score lines like "Sanford 69, Ridgway 26" or "Sanford over Ridgway, 69 to 26"
-function parseScoresFromHTML(html) {
-  const results = [];
+function parseChsaaPage(html, bracketKey) {
+  const results = {};
   if (!html) return results;
 
-  // Pattern 1: "Team1 over Team2, XX to XX" (MileHigh format)
-  const p1 = /([A-Z][A-Za-z\s\/\.\-']+?)\s+over\s+([A-Z][A-Za-z\s\/\.\-']+?),\s*(\d+)\s+to\s+(\d+)/g;
-  let m;
-  while ((m = p1.exec(html)) !== null) {
-    results.push({ t1: m[1].trim(), sc1: parseInt(m[3]), t2: m[2].trim(), sc2: parseInt(m[4]), final: true });
-  }
+  // Each game is an <a> tag with href containing the game number
+  const gameLinkRe = /<a[^>]+href="\/basketball\/2026\/(?:boys|girls)\/[^"]+\/(\d+)\/[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
 
-  // Pattern 2: "#N Team1 over #N Team2, XX to XX"
-  const p2 = /#\d+\s+([A-Z][A-Za-z\s\/\.\-']+?)\s+over\s+#\d+\s+([A-Z][A-Za-z\s\/\.\-']+?),\s*(\d+)\s+to\s+(\d+)/g;
-  while ((m = p2.exec(html)) !== null) {
-    results.push({ t1: m[1].trim(), sc1: parseInt(m[3]), t2: m[2].trim(), sc2: parseInt(m[4]), final: true });
-  }
+  let match;
+  while ((match = gameLinkRe.exec(html)) !== null) {
+    const chsaaGameNum = parseInt(match[1], 10);
+    // Strip HTML tags to get plain text
+    const text = match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
-  // Pattern 3: "Team1 XX, Team2 XX" (score line format)
-  const p3 = /([A-Z][A-Za-z\s\/\-']+?)\s+(\d{2,3}),\s*([A-Z][A-Za-z\s\/\-']+?)\s+(\d{2,3})/g;
-  while ((m = p3.exec(html)) !== null) {
-    const sc1 = parseInt(m[2]), sc2 = parseInt(m[4]);
-    if (sc1 >= 10 && sc1 <= 199 && sc2 >= 10 && sc2 <= 199) {
-      results.push({ t1: m[1].trim(), sc1, t2: m[3].trim(), sc2, final: true });
+    const scores = extractScores(text);
+    if (scores) {
+      const key = `${bracketKey}-G${chsaaGameNum}`;
+      results[key] = { sc1: scores.sc1, sc2: scores.sc2, final: true };
     }
   }
 
   return results;
 }
 
-function matchScoresToGames(parsedScores) {
-  const matched = {};
-  for (const [gameId, [teamA, teamB]] of Object.entries(GAME_MATCHUPS)) {
-    for (const s of parsedScores) {
-      const fwd = teamMatch(s.t1, teamA) && teamMatch(s.t2, teamB);
-      const rev = teamMatch(s.t1, teamB) && teamMatch(s.t2, teamA);
-      if (fwd) {
-        matched[gameId] = { sc1: s.sc1, sc2: s.sc2, final: s.final };
-        break;
-      }
-      if (rev) {
-        matched[gameId] = { sc1: s.sc2, sc2: s.sc1, final: s.final };
-        break;
-      }
-    }
-  }
-  return matched;
+// Extract two basketball scores from CHSAA plain-text game block.
+// Text example: "G1 3/6 1 Sanford 69 32 Ridgway 26"
+// Scores are the last two numbers in the 10-150 range.
+function extractScores(text) {
+  const nums = [...text.matchAll(/\b(\d{1,3})\b/g)].map(m => parseInt(m[1], 10));
+
+  // Need at least seed + score for each team
+  if (nums.length < 4) return null;
+
+  // Skip if text contains "W" followed by a number (TBD/winner placeholder)
+  if (/\bW\d+\b/.test(text)) return null;
+
+  // Score candidates: 10–150 (realistic basketball range, excludes seeds 1–32)
+  const scoreCandidates = nums.filter(n => n >= 10 && n <= 150);
+  if (scoreCandidates.length < 2) return null;
+
+  // Take the last two — in CHSAA text layout scores appear after team names
+  const sc1 = scoreCandidates[scoreCandidates.length - 2];
+  const sc2 = scoreCandidates[scoreCandidates.length - 1];
+
+  // Ties don't happen in basketball, both must be valid
+  if (sc1 === sc2) return null;
+
+  return { sc1, sc2 };
 }
+
+// ─── HTTP FETCH WITH RETRIES ──────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function fetchPage(url) {
-  try {
-    const r = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; ScoreFetcher/1.0)" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!r.ok) return "";
-    return r.text();
-  } catch (e) {
-    console.log(`Failed to fetch ${url}:`, e.message);
-    return "";
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      const r = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; CHSAABracketBot/2.0)",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Cache-Control": "no-cache",
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!r.ok) {
+        console.warn(`HTTP ${r.status} for ${url} (attempt ${attempt})`);
+        if (attempt < 3) await sleep(2000 * attempt);
+        continue;
+      }
+      return await r.text();
+    } catch (e) {
+      console.warn(`Fetch failed ${url} (attempt ${attempt}): ${e.message}`);
+      if (attempt < 3) await sleep(2000 * attempt);
+    }
   }
+  console.error(`All retries failed for ${url}`);
+  return "";
 }
 
+// ─── MAIN HANDLER ─────────────────────────────────────────────────────────
 const handler = async () => {
-  console.log("fetch-scores running at", new Date().toISOString());
+  console.log("fetch-scores START", new Date().toISOString());
 
   try {
-    // Fetch all sources
-    const [boysToday, girlsToday, boysFri, girlsFri] = await Promise.all([
-      fetchPage(SOURCES.boys_today),
-      fetchPage(SOURCES.girls_today),
-      fetchPage(SOURCES.boys_fri),
-      fetchPage(SOURCES.girls_fri),
+    // Fetch all 4 CHSAA pages in parallel
+    const [b2aHtml, g2aHtml, b1aHtml, g1aHtml] = await Promise.all([
+      fetchPage(SOURCES.b2a),
+      fetchPage(SOURCES.g2a),
+      fetchPage(SOURCES.b1a),
+      fetchPage(SOURCES.g1a),
     ]);
 
-    const combined = [boysToday, girlsToday, boysFri, girlsFri].join("\n\n");
-    const parsed = parseScoresFromHTML(combined);
-    console.log(`Parsed ${parsed.length} raw score entries`);
+    // Log page sizes to confirm pages loaded
+    console.log("Page sizes (chars):", {
+      b2a: b2aHtml.length, g2a: g2aHtml.length,
+      b1a: b1aHtml.length, g1a: g1aHtml.length,
+    });
 
-    const scores = matchScoresToGames(parsed);
-    console.log(`Matched ${Object.keys(scores).length} games`);
-
-    const output = {
-      updated: new Date().toISOString(),
-      scores,
+    const scores = {
+      ...parseChsaaPage(b2aHtml, "b2a"),
+      ...parseChsaaPage(g2aHtml, "g2a"),
+      ...parseChsaaPage(b1aHtml, "b1a"),
+      ...parseChsaaPage(g1aHtml, "g1a"),
     };
 
-    // Write to public/scores.json via Netlify Blobs or just return it
-    // Since we can't write files directly, we use the response to update via a deploy hook
-    // Instead: write to Netlify Blobs (key-value store built into Netlify)
-    const { getStore } = await import("@netlify/blobs");
+    const count = Object.keys(scores).length;
+    console.log(`Parsed ${count} completed games:`, JSON.stringify(scores));
+
+    const output = { updated: new Date().toISOString(), scores };
+
     const store = getStore("scores");
     await store.setJSON("latest", output);
-    console.log("Saved scores to Netlify Blobs");
+    console.log("Saved to Netlify Blobs OK");
 
-    return { statusCode: 200, body: JSON.stringify(output) };
+    return { statusCode: 200, body: JSON.stringify({ ok: true, count }) };
   } catch (err) {
-    console.error("fetch-scores error:", err);
-    return { statusCode: 500, body: err.message };
+    console.error("fetch-scores ERROR:", err);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
 
 export { handler };
-export const config = {
-  schedule: "*/10 * * * *", // every 10 minutes
-};
+export const config = { schedule: "*/5 * * * *" };
