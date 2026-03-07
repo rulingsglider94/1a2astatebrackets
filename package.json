@@ -1,0 +1,9 @@
+{
+  "name": "1a2astatebrackets",
+  "version": "1.0.0",
+  "description": "CHSAA 1A/2A Colorado State Basketball Brackets",
+  "dependencies": {
+    "@netlify/functions": "^2.0.0",
+    "node-fetch": "^3.3.2"
+  }
+}

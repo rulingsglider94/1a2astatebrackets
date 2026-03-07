@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 Colorado 1A &amp; 2A State Basketball</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1a2744;--gold:#c8952a;--gold2:#e8b040;--light:#f4f6fa;--mid:#dde3ee;
+  --muted:#7a8499;--green:#1e6b3a;--loser:#aaa;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Open Sans',sans-serif;background:var(--light);color:#222;}
+.site-header{background:var(--navy);border-bottom:4px solid var(--gold);}
+.h-inner{max-width:1800px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.badge{background:var(--gold);color:var(--navy);font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:6px 10px;border-radius:4px;flex-shrink:0;}
+.h-titles h1{font-family:'Oswald',sans-serif;font-size:1.5rem;color:#fff;letter-spacing:1.5px;text-transform:uppercase;line-height:1.1;}
+.h-titles p{font-size:.73rem;color:#9fb3d8;margin-top:3px;}
+.h-right{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.updated{font-size:.7rem;color:#9fb3d8;text-align:right;line-height:1.6;}
+.updated a{color:var(--gold);text-decoration:none;}
+.updated strong{color:#fff;}
+
+/* REFRESH BAR */
+.refresh-bar{background:#1f2e56;border-bottom:2px solid #2d3f6e;padding:9px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.src-btn{display:inline-flex;align-items:center;gap:6px;background:#2d3f6e;color:#c8d8f0;
+  font-family:'Oswald',sans-serif;font-size:.78rem;font-weight:600;letter-spacing:.5px;
+  border-radius:5px;padding:7px 13px;text-decoration:none;transition:background .15s,color .15s;white-space:nowrap;}
+.src-btn:hover{background:var(--gold);color:var(--navy);}
+.r-tip{font-size:.68rem;color:#6a80a8;margin-left:4px;}
+.r-tip strong{color:#9fb3d8;}
+/* score entry modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:10px;padding:20px 24px;width:300px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.25);}
+.modal h3{font-family:'Oswald',sans-serif;font-size:1rem;color:var(--navy);margin-bottom:14px;text-transform:uppercase;letter-spacing:.8px;}
+.modal .teams{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.modal .trow{display:flex;align-items:center;gap:10px;}
+.modal .trow label{flex:1;font-size:.8rem;font-weight:600;color:#333;}
+.modal .trow input{width:64px;border:2px solid var(--mid);border-radius:5px;padding:6px 8px;font-family:'Oswald',sans-serif;font-size:1.1rem;font-weight:700;text-align:center;color:var(--navy);}
+.modal .trow input:focus{outline:none;border-color:var(--gold);}
+.modal .btn-row{display:flex;gap:8px;justify-content:flex-end;}
+.modal .btn-row button{font-family:'Oswald',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.5px;
+  padding:8px 16px;border:none;border-radius:5px;cursor:pointer;text-transform:uppercase;}
+.btn-save{background:var(--gold);color:var(--navy);}
+.btn-save:hover{background:var(--gold2);}
+.btn-cancel{background:#edf0f7;color:#666;}
+.btn-cancel:hover{background:#dde3ee;}
+
+/* TABS */
+.tabs{background:#243156;border-bottom:3px solid var(--gold);display:flex;overflow-x:auto;padding:0 24px;}
+.tab{font-family:'Oswald',sans-serif;font-size:.92rem;font-weight:500;letter-spacing:.7px;
+  color:#9fb3d8;padding:11px 20px;cursor:pointer;border:none;background:none;
+  border-bottom:3px solid transparent;margin-bottom:-3px;white-space:nowrap;text-transform:uppercase;transition:color .15s;}
+.tab:hover{color:#fff;}
+.tab.active{color:var(--gold2);border-bottom-color:var(--gold2);}
+.panel{display:none;}.panel.active{display:block;}
+.p-header{background:#fff;border-bottom:1px solid var(--mid);padding:10px 24px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;}
+.p-header h2{font-family:'Oswald',sans-serif;font-size:1.1rem;font-weight:600;color:var(--navy);letter-spacing:.7px;text-transform:uppercase;}
+.venue{font-size:.7rem;color:var(--muted);margin-left:auto;}
+.venue a{color:var(--gold);text-decoration:none;}
+
+/* BRACKET */
+.b-scroll{overflow-x:auto;padding:20px 24px 32px;}
+.b-wrap{display:flex;min-width:max-content;}
+.r-col{width:190px;flex-shrink:0;display:flex;flex-direction:column;}
+.r-label{font-family:'Oswald',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--navy);background:var(--mid);border:1px solid #c5cedf;text-align:center;padding:5px 4px 3px;border-radius:3px 3px 0 0;}
+.r-label small{display:block;font-size:.58rem;font-weight:400;color:#888;margin-top:1px;}
+.r-games{position:relative;}
+.conn{width:28px;flex-shrink:0;position:relative;}
+.conn svg{position:absolute;top:0;left:0;width:100%;overflow:visible;}
+.m-box{position:absolute;left:0;right:0;background:#fff;border:1.5px solid #c5cedf;border-radius:5px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:border-color .3s,box-shadow .3s;}
+.m-box.done{border-color:#b8c8db;}
+.m-box:hover{border-color:var(--gold);}
+.m-box.fresh{border-color:#3ecf6e;box-shadow:0 0 0 3px rgba(62,207,110,.18);}
+.m-head{background:#edf0f7;padding:2px 6px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--mid);}
+.gnum{font-family:'Oswald',sans-serif;font-size:.58rem;color:var(--muted);}
+.gdate{font-size:.57rem;color:var(--muted);}
+.gstat{font-size:.57rem;font-weight:700;padding:1px 5px;border-radius:8px;text-transform:uppercase;}
+.sf{background:#e6f2ea;color:#2a6b3a;}.st{background:#f0f0f0;color:#bbb;}.sl{background:#fff4e0;color:#a07010;}
+.t-row{display:flex;align-items:center;padding:4px 6px;gap:4px;min-height:28px;border-bottom:1px solid #f0f2f7;}
+.t-row:last-child{border-bottom:none;}
+.t-row.win{background:#eef7f1;}
+.seed{font-family:'Oswald',sans-serif;font-size:.6rem;color:var(--muted);width:14px;text-align:center;flex-shrink:0;}
+.tname{flex:1;font-size:.71rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tname.w{color:#1a5c2a;}.tname.l{color:var(--loser);}.tname.tbd{color:#ccc;font-style:italic;font-weight:400;}
+.sc{font-family:'Oswald',sans-serif;font-size:.8rem;font-weight:700;min-width:20px;text-align:right;flex-shrink:0;}
+.sc.w{color:var(--green);}.sc.l{color:var(--loser);}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;background:#1a2744;color:#fff;
+  font-size:.8rem;padding:10px 16px;border-radius:7px;border-left:4px solid var(--gold);
+  opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;z-index:9999;max-width:300px;}
+#toast.show{opacity:1;transform:translateY(0);}
+
+@media(max-width:600px){.h-inner,.refresh-bar{padding:10px 12px;}.b-scroll{padding:12px 10px 24px;}.r-col{width:162px;}}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="h-inner">
+    <div class="badge">CHSAA 2026</div>
+    <div class="h-titles">
+      <h1>Colorado State Basketball</h1>
+      <p>Class 1A &amp; 2A · Boys &amp; Girls · March 6–14, 2026</p>
+    </div>
+    <div class="h-right">
+      <div class="updated">Last update: <strong id="lastUpdateTime">Sat Mar 7 — morning</strong></div>
+    </div>
+  </div>
+</header>
+
+<div class="refresh-bar">
+  <a class="src-btn" href="https://milehighprepreport.com" target="_blank">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+    MileHigh Prep
+  </a>
+  <a class="src-btn" href="https://www.maxpreps.com/co/basketball/scores/?mobile=1" target="_blank">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+    MaxPreps Boys
+  </a>
+  <a class="src-btn" href="https://www.maxpreps.com/co/basketball/girls/scores/?mobile=1" target="_blank">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+    MaxPreps Girls
+  </a>
+  <span class="r-tip">👆 Open a source, get the score, then <strong>tap any game card</strong> to enter it</span>
+</div>
+
+<nav class="tabs">
+  <button class="tab active" onclick="showTab('b2a',this)">🏀 Boys 2A</button>
+  <button class="tab" onclick="showTab('g2a',this)">🏀 Girls 2A</button>
+  <button class="tab" onclick="showTab('b1a',this)">🏀 Boys 1A</button>
+  <button class="tab" onclick="showTab('g1a',this)">🏀 Girls 1A</button>
+</nav>
+
+<div id="b2a" class="panel active">
+  <div class="p-header"><h2>Boys 2A</h2><span class="venue"><a href="https://www.maxpreps.com/co/basketball/scores/?mobile=1" target="_blank">MaxPreps ↗</a></span></div>
+  <div class="b-scroll"><div id="b2a-b"></div></div>
+</div>
+<div id="g2a" class="panel">
+  <div class="p-header"><h2>Girls 2A</h2><span class="venue"><a href="https://www.maxpreps.com/co/basketball/girls/scores/?mobile=1" target="_blank">MaxPreps ↗</a></span></div>
+  <div class="b-scroll"><div id="g2a-b"></div></div>
+</div>
+<div id="b1a" class="panel">
+  <div class="p-header"><h2>Boys 1A</h2><span class="venue"><a href="https://www.maxpreps.com/co/basketball/scores/?mobile=1" target="_blank">MaxPreps ↗</a></span></div>
+  <div class="b-scroll"><div id="b1a-b"></div></div>
+</div>
+<div id="g1a" class="panel">
+  <div class="p-header"><h2>Girls 1A</h2><span class="venue"><a href="https://www.maxpreps.com/co/basketball/girls/scores/?mobile=1" target="_blank">MaxPreps ↗</a></span></div>
+  <div class="b-scroll"><div id="g1a-b"></div></div>
+</div>
+
+
+<!-- Score entry modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Enter Score</h3>
+    <div class="teams" id="modalTeams"></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveModal()">Save Score</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ─── helpers ──────────────────────────────────────────────────────────────
+function mk(s1,t1,sc1,s2,t2,sc2,date,time){
+  const done=sc1!==null&&sc2!==null;
+  return {s1,t1,sc1,s2,t2,sc2,done,w:done?(sc1>sc2?1:2):null,date,time:time||null};
+}
+
+// ─── BOYS 2A ──────────────────────────────────────────────────────────────
+const B2A={
+  rounds:[
+    {l:'Round 1',d:'3/6',k:['G1','G2','G3','G4','G5','G6','G7','G8','G9','G10','G11','G12','G13','G14','G15','G16']},
+    {l:'Sweet 16',d:'3/7',k:['G17','G18','G19','G20','G21','G22','G23','G24']},
+    {l:'Great 8',d:'3/12',k:['G25','G26','G27','G28']},
+    {l:'Final 4',d:'3/13',k:['G29','G30']},
+    {l:'Final',d:'3/14',k:['G31']},
+  ],
+  games:{
+    G1:mk(1,'Sanford',69,32,'Ridgway',26,'3/6'),
+    G2:mk(17,'Center',47,16,'Custer County',40,'3/6'),
+    G3:mk(8,'Merino',77,25,'Hoehne',46,'3/6'),
+    G4:mk(9,'Limon',75,24,'Holyoke',31,'3/6'),
+    G5:mk(29,'Akron',54,4,'Twin Peaks Classical',45,'3/6'),
+    G6:mk(13,'Plateau Valley',52,20,'Trinidad',34,'3/6'),
+    G7:mk(5,'Golden View Classical',56,28,'Sedgwick County',47,'3/6'),
+    G8:mk(12,'Front Range Christian',95,21,'Vanguard Classical E',59,'3/6'),
+    G9:mk(2,'Simla',74,31,'Belleview Christian',31,'3/6'),
+    G10:mk(18,'Caprock Academy',67,15,'Crowley County',60,'3/6'),
+    G11:mk(7,'Vail Christian',70,26,'Dolores',53,'3/6'),
+    G12:mk(10,'Haxtun',66,23,'Las Animas',34,'3/6'),
+    G13:mk(3,'Heritage Christian',53,30,'Crested Butte',27,'3/6'),
+    G14:mk(14,'Campion Academy',69,19,'Dayspring Christian',64,'3/6'),
+    G15:mk(6,'Byers',66,27,'Fowler',30,'3/6'),
+    G16:mk(11,'Swallows Charter',65,22,'Union Colony Prep',55,'3/6'),
+    G17:mk(1,'Sanford',null,17,'Center',null,'3/7','2:30P'),
+    G18:mk(8,'Merino',null,9,'Limon',null,'3/7','2:45P'),
+    G19:mk(13,'Plateau Valley',null,29,'Akron',null,'3/7','1:00P'),
+    G20:mk(5,'Golden View Classical',null,12,'Front Range Christian',null,'3/7','11:00A'),
+    G21:mk(2,'Simla',null,18,'Caprock Academy',null,'3/7','2:30P'),
+    G22:mk(7,'Vail Christian',null,10,'Haxtun',null,'3/7','1:00P'),
+    G23:mk(3,'Heritage Christian',null,14,'Campion Academy',null,'3/7','7:00P'),
+    G24:mk(6,'Byers',null,11,'Swallows Charter',null,'3/7','4:30P'),
+    G25:mk(null,'TBD',null,null,'TBD',null,'3/12'),G26:mk(null,'TBD',null,null,'TBD',null,'3/12'),
+    G27:mk(null,'TBD',null,null,'TBD',null,'3/12'),G28:mk(null,'TBD',null,null,'TBD',null,'3/12'),
+    G29:mk(null,'TBD',null,null,'TBD',null,'3/13'),G30:mk(null,'TBD',null,null,'TBD',null,'3/13'),
+    G31:mk(null,'TBD',null,null,'TBD',null,'3/14'),
+  },
+  adv:[['G17',1,'G25',1],['G18',1,'G25',2],['G19',1,'G26',1],['G20',1,'G26',2],
+       ['G21',1,'G27',1],['G22',1,'G27',2],['G23',1,'G28',1],['G24',1,'G28',2],
+       ['G25',1,'G29',1],['G26',1,'G29',2],['G27',1,'G30',1],['G28',1,'G30',2],
+       ['G29',1,'G31',1],['G30',1,'G31',2]],
+};
+
+// ─── GIRLS 2A ─────────────────────────────────────────────────────────────
+const G2A={
+  rounds:[
+    {l:'Round 1',d:'3/6',k:['G1','G2','G3','G4','G5','G6','G7','G8','G9','G10','G11','G12','G13','G14','G15','G16']},
+    {l:'Sweet 16',d:'3/7',k:['G17','G18','G19','G20','G21','G22','G23','G24']},
+    {l:'Great 8',d:'3/12',k:['G25','G26','G27','G28']},
+    {l:'Final 4',d:'3/13',k:['G29','G30']},
+    {l:'Final',d:'3/14',k:['G31']},
+  ],
+  games:{
+    G1:mk(1,'Merino',69,32,'Custer County',10,'3/6'),
+    G2:mk(17,'Center',47,16,'Byers',44,'3/6'),
+    G3:mk(8,'Akron',53,25,'Soroco',23,'3/6'),
+    G4:mk(24,'James Irwin',52,9,'Rangely',41,'3/6'),
+    G5:mk(4,'Sargent',null,29,'Vail Mountain',null,'3/6'),
+    G6:mk(20,'Hoehne',43,13,'Loveland Classical',35,'3/6'),
+    G7:mk(5,'Sedgwick County',66,28,'Ascent Classical',26,'3/6'),
+    G8:mk(12,'Calhan',43,21,'Gilpin County',31,'3/6'),
+    G9:mk(2,'Simla',74,31,'Golden View Classical',11,'3/6'),
+    G10:mk(15,'Dayspring Christian',51,18,'Las Animas',43,'3/6'),
+    G11:mk(7,'Heritage Christian',61,26,'Campion Academy',25,'3/6'),
+    G12:mk(10,'Holyoke',49,23,'Caprock Academy',27,'3/6'),
+    G13:mk(3,'Sanford',61,30,'Ridgway',21,'3/6'),
+    G14:mk(14,'Swink',38,19,'Trinidad',27,'3/6'),
+    G15:mk(6,'Plateau Valley',54,27,'Mancos',22,'3/6'),
+    G16:mk(11,'Del Norte',47,22,'Dove Creek',26,'3/6'),
+    G17:mk(1,'Merino',null,17,'Center',null,'3/7','1:00P'),
+    G18:mk(8,'Akron',null,24,'James Irwin',null,'3/7','11:00A'),
+    G19:mk(4,'Sargent',null,20,'Hoehne',null,'3/7','12:00P'),
+    G20:mk(5,'Sedgwick County',null,12,'Calhan',null,'3/7','1:00P'),
+    G21:mk(2,'Simla',null,15,'Dayspring Christian',null,'3/7','1:00P'),
+    G22:mk(7,'Heritage Christian',null,10,'Holyoke',null,'3/7','12:00P'),
+    G23:mk(3,'Sanford',null,14,'Swink',null,'3/7','1:00P'),
+    G24:mk(6,'Plateau Valley',null,11,'Del Norte',null,'3/7','12:00P'),
+    G25:mk(null,'TBD',null,null,'TBD',null,'3/12'),G26:mk(null,'TBD',null,null,'TBD',null,'3/12'),
+    G27:mk(null,'TBD',null,null,'TBD',null,'3/12'),G28:mk(null,'TBD',null,null,'TBD',null,'3/12'),
+    G29:mk(null,'TBD',null,null,'TBD',null,'3/13'),G30:mk(null,'TBD',null,null,'TBD',null,'3/13'),
+    G31:mk(null,'TBD',null,null,'TBD',null,'3/14'),
+  },
+  adv:[['G17',1,'G25',1],['G18',1,'G25',2],['G19',1,'G26',1],['G20',1,'G26',2],
+       ['G21',1,'G27',1],['G22',1,'G27',2],['G23',1,'G28',1],['G24',1,'G28',2],
+       ['G25',1,'G29',1],['G26',1,'G29',2],['G27',1,'G30',1],['G28',1,'G30',2],
+       ['G29',1,'G31',1],['G30',1,'G31',2]],
+};
+
+// ─── BOYS 1A ──────────────────────────────────────────────────────────────
+const B1A={
+  rounds:[
+    {l:'Round 1',d:'3/5–6',k:['G1','G2','G3','G4','G5','G6','G7','G8','G9','G10','G11','G12','G13','G14','G15','G16']},
+    {l:'Sweet 16',d:'3/6–7',k:['G17','G18','G19','G20','G21','G22','G23','G24']},
+    {l:'Great 8',d:'3/12',k:['G25','G26','G27','G28']},
+    {l:'Final 4',d:'3/13',k:['G29','G30']},
+    {l:'Champ.',d:'3/14',k:['G31']},
+  ],
+  games:{
+    G1:mk(1,'McClave',75,32,'Arickaree',40,'3/6'),
+    G2:mk(16,'Granada',63,17,'Evangel Christian',54,'3/6'),
+    G3:mk(8,'Elbert',66,25,'Cheraw',40,'3/6'),
+    G4:mk(9,'Otis',61,24,'Rocky Mtn Lutheran',47,'3/6'),
+    G5:mk(4,'Flatirons Academy',56,29,'Flagler',46,'3/6'),
+    G6:mk(20,'Holly',57,13,'Denver Jewish Day',54,'3/6'),
+    G7:mk(5,'Stratton',82,28,'Front Range Baptist',59,'3/6'),
+    G8:mk(12,'Sangre de Cristo',65,21,'Kim/Branson',52,'3/6'),
+    G9:mk(2,'Nucla',75,31,'Kit Carson',49,'3/6'),
+    G10:mk(15,'De Beque',63,18,'Ouray',61,'3/6'),
+    G11:mk(7,'Denver Waldorf',39,26,'Idalia',31,'3/6'),
+    G12:mk(10,'Sierra Grande',72,23,'Caliche',46,'3/6'),
+    G13:mk(3,'Cheyenne Wells',60,30,'Springfield',34,'3/6'),
+    G14:mk(14,'Wiley',60,19,'Pikes Peak Christian',51,'3/6'),
+    G15:mk(6,'Prairie',60,27,'Mile High Academy',11,'3/5'),
+    G16:mk(11,'Peetz',61,22,'Denver Acad. of Torah',37,'3/5'),
+    G17:mk(1,'McClave',null,16,'Granada',null,'3/7','12:30P'),
+    G18:mk(8,'Elbert',null,9,'Otis',null,'3/7','1:00P'),
+    G19:mk(4,'Flatirons Academy',null,20,'Holly',null,'3/7','1:00P'),
+    G20:mk(5,'Stratton',null,12,'Sangre de Cristo',null,'3/7','2:30P'),
+    G21:mk(2,'Nucla',null,15,'De Beque',null,'3/7','1:30P'),
+    G22:mk(7,'Denver Waldorf',null,10,'Sierra Grande',null,'3/7','1:00P'),
+    G23:mk(3,'Cheyenne Wells',null,14,'Wiley',null,'3/7','2:00P'),
+    G24:mk(6,'Prairie',47,11,'Peetz',40,'3/6'),
+    G25:mk(null,'TBD',null,null,'TBD',null,'3/12'),G26:mk(null,'TBD',null,null,'TBD',null,'3/12'),
+    G27:mk(null,'TBD',null,null,'TBD',null,'3/12'),G28:mk(null,'TBD',null,null,'TBD',null,'3/12'),
+    G29:mk(null,'TBD',null,null,'TBD',null,'3/13'),G30:mk(null,'TBD',null,null,'TBD',null,'3/13'),
+    G31:mk(null,'TBD',null,null,'TBD',null,'3/14'),
+  },
+  adv:[['G17',1,'G25',1],['G18',1,'G25',2],['G19',1,'G26',1],['G20',1,'G26',2],
+       ['G21',1,'G27',1],['G22',1,'G27',2],['G23',1,'G28',1],['G24',1,'G28',2],
+       ['G25',1,'G29',1],['G26',1,'G29',2],['G27',1,'G30',1],['G28',1,'G30',2],
+       ['G29',1,'G31',1],['G30',1,'G31',2]],
+};
+
+// ─── GIRLS 1A ─────────────────────────────────────────────────────────────
+const G1A={
+  rounds:[
+    {l:'Round 1',d:'3/5–6',k:['G1','G2','G3','G4','G5','G6','G7','G8','G9','G10','G11','G12','G13','G14','G15','G16']},
+    {l:'Sweet 16',d:'3/6–7',k:['G17','G18','G19','G20','G21','G22','G23','G24']},
+    {l:'Great 8',d:'3/12',k:['G25','G26','G27','G28']},
+    {l:'Final 4',d:'3/13',k:['G29','G30']},
+    {l:'Final',d:'3/14',k:['G31']},
+  ],
+  games:{
+    G1:mk(1,'McClave',76,32,'Deer Trail',11,'3/6'),
+    G2:mk(16,'Granada',47,17,'Kim/Branson',32,'3/6'),
+    G3:mk(8,'Caliche',64,25,'Peetz',37,'3/5'),
+    G4:mk(9,'Cheraw',48,24,'Mile High Academy',15,'3/5'),
+    G5:mk(4,'Stratton',59,29,'Primero',20,'3/6'),
+    G6:mk(20,'Genoa-Hugo/Karval',39,13,'Flatirons Academy',29,'3/6'),
+    G7:mk(5,'Fleming',62,28,'Lone Star',35,'3/6'),
+    G8:mk(12,'Idalia',61,21,'Weldon Valley',20,'3/6'),
+    G9:mk(2,'Eads',64,31,'Miami-Yoder',20,'3/5'),
+    G10:mk(18,'Kit Carson',51,15,'Denver Jewish Day',38,'3/5'),
+    G11:mk(7,'Prairie',41,26,'Cheyenne Wells',34,'3/5'),
+    G12:mk(10,'Springfield',61,23,'Cotopaxi',18,'3/5'),
+    G13:mk(3,'Evangel Christian',55,30,'South Baca',26,'3/6'),
+    G14:mk(14,'Flagler',54,19,'Hi-Plains',43,'3/6'),
+    G15:mk(6,'Nucla',40,27,'De Beque',37,'3/6'),
+    G16:mk(11,'Briggsdale',63,22,'Creede',22,'3/6'),
+    G17:mk(1,'McClave',null,16,'Granada',null,'3/7','11:00A'),
+    G18:mk(9,'Cheraw',42,8,'Caliche',31,'3/6'),
+    G19:mk(4,'Stratton',null,20,'Genoa-Hugo/Karval',null,'3/7','1:00P'),
+    G20:mk(5,'Fleming',null,12,'Idalia',null,'3/7','1:00P'),
+    G21:mk(2,'Eads',63,18,'Kit Carson',39,'3/6'),
+    G22:mk(10,'Springfield',55,7,'Prairie',42,'3/6'),
+    G23:mk(3,'Evangel Christian',null,14,'Flagler',null,'3/7','2:00P'),
+    G24:mk(6,'Nucla',null,11,'Briggsdale',null,'3/7','11:00A'),
+    G25:mk(null,'TBD',null,null,'TBD',null,'3/12'),G26:mk(null,'TBD',null,null,'TBD',null,'3/12'),
+    G27:mk(null,'TBD',null,null,'TBD',null,'3/12'),G28:mk(null,'TBD',null,null,'TBD',null,'3/12'),
+    G29:mk(null,'TBD',null,null,'TBD',null,'3/13'),G30:mk(null,'TBD',null,null,'TBD',null,'3/13'),
+    G31:mk(null,'TBD',null,null,'TBD',null,'3/14'),
+  },
+  adv:[['G17',1,'G25',1],['G18',1,'G25',2],['G19',1,'G26',1],['G20',1,'G26',2],
+       ['G21',1,'G27',1],['G22',1,'G27',2],['G23',1,'G28',1],['G24',1,'G28',2],
+       ['G25',1,'G29',1],['G26',1,'G29',2],['G27',1,'G30',1],['G28',1,'G30',2],
+       ['G29',1,'G31',1],['G30',1,'G31',2]],
+};
+
+const ALL={b2a:B2A,g2a:G2A,b1a:B1A,g1a:G1A};
+const freshGames=new Set();
+
+// ─── PROPAGATE ────────────────────────────────────────────────────────────
+function propagate(bk){
+  bk.adv.forEach(([from,,to,slot])=>{
+    const src=bk.games[from]; if(!src||src.w===null) return;
+    const dst=bk.games[to];   if(!dst) return;
+    const w=src.w===1?{t:src.t1,s:src.s1}:{t:src.t2,s:src.s2};
+    if(slot===1){if(!dst.t1||dst.t1==='TBD'){dst.t1=w.t;dst.s1=w.s;}}
+    else        {if(!dst.t2||dst.t2==='TBD'){dst.t2=w.t;dst.s2=w.s;}}
+  });
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────
+const CH=66,GG=8,SL=CH+GG;
+
+function cardHTML(gid,gm,bkId){
+  const tb1=!gm.t1||gm.t1==='TBD',tb2=!gm.t2||gm.t2==='TBD';
+  const d1=typeof gm.s1==='number'?gm.s1:'',d2=typeof gm.s2==='number'?gm.s2:'';
+  const w1=gm.done&&gm.w===1,w2=gm.done&&gm.w===2;
+  const stat=gm.done?'Final':(gm.time||'TBD');
+  const sc=gm.done?'sf':(gm.time?'sl':'st');
+  // hi inlined below
+  var cls='m-box'+(gm.done?' done':'')+(freshGames.has(gid)?' fresh':'');
+  var oc='openScoreModal('+JSON.stringify(bkId)+','+JSON.stringify(gid)+')';
+  var h='<div class="'+cls+'" data-gid="'+gid+'" onclick="'+oc+'" style="cursor:pointer" title="Click to enter/edit score">';
+  h+='<div class="m-head"><span class="gnum">'+gid+'</span><span class="gdate">'+gm.date+'</span><span class="gstat '+sc+'">'+stat+'</span></div>';
+  h+='<div class="t-row'+(w1?' win':'')+'"><span class="seed">'+d1+'</span><span class="tname'+(w1?' w':gm.done?' l':'')+(tb1?' tbd':'')+'">'+( tb1?'TBD':gm.t1)+'</span>'+(gm.done?'<span class="sc'+(w1?' w':' l')+'">'+gm.sc1+'</span>':'')+'</div>';
+  h+='<div class="t-row'+(w2?' win':'')+'"><span class="seed">'+d2+'</span><span class="tname'+(w2?' w':gm.done?' l':'')+(tb2?' tbd':'')+'">'+( tb2?'TBD':gm.t2)+'</span>'+(gm.done?'<span class="sc'+(w2?' w':' l')+'">'+gm.sc2+'</span>':'')+'</div>';
+  h+='</div>';
+  return h;
+}
+
+function renderBracket(key,cid){
+  const bk=ALL[key];
+  propagate(bk);
+  const el=document.getElementById(cid); if(!el) return;
+  const n=bk.rounds[0].k.length;
+  const H=n*SL;
+  let html='<div class="b-wrap">';
+  bk.rounds.forEach((r,ri)=>{
+    if(ri>0) html+=`<div class="conn" data-ri="${ri}"><svg style="height:${H}px" viewBox="0 0 28 ${H}"></svg></div>`;
+    html+=`<div class="r-col"><div class="r-label">${r.l}<small>${r.d}</small></div><div class="r-games" style="height:${H}px" data-ri="${ri}">`;
+    r.k.forEach(k=>html+=cardHTML(k,bk.games[k],key));
+    html+='</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+
+  const cy={};
+  bk.rounds.forEach((r,ri)=>{
+    const col=el.querySelector(`.r-games[data-ri="${ri}"]`);
+    if(ri===0){
+      r.k.forEach((k,i)=>{
+        const top=i*SL+GG/2; cy[k]=top+CH/2;
+        const box=col.querySelector(`[data-gid="${k}"]`);
+        if(box) box.style.top=top+'px';
+      });
+    } else {
+      r.k.forEach(k=>{
+        const feeders=bk.adv.filter(([,,,to])=>to===k).map(([f])=>f);
+        const vals=feeders.map(f=>cy[f]).filter(v=>v!==undefined);
+        const c=vals.length===2?(vals[0]+vals[1])/2:vals.length===1?vals[0]:(r.k.indexOf(k)+.5)*(H/r.k.length);
+        cy[k]=c;
+        const box=col.querySelector(`[data-gid="${k}"]`);
+        if(box) box.style.top=Math.max(0,c-CH/2)+'px';
+      });
+    }
+  });
+
+  bk.rounds.forEach((r,ri)=>{
+    if(ri===0) return;
+    const svg=el.querySelector(`.conn[data-ri="${ri}"] svg`); if(!svg) return;
+    let lines='';
+    r.k.forEach(k=>{
+      const feeders=bk.adv.filter(([,,,to])=>to===k).map(([f])=>f);
+      const dy=cy[k]; if(dy===undefined) return;
+      feeders.forEach(f=>{
+        const sy=cy[f]; if(sy===undefined) return;
+        lines+=`<polyline points="0,${sy} 14,${sy} 14,${dy} 28,${dy}" fill="none" stroke="#c8952a" stroke-width="1.5" stroke-opacity="0.4"/>`;
+      });
+    });
+    svg.innerHTML=lines;
+  });
+}
+
+function renderAll(){
+  renderBracket('b2a','b2a-b');
+  renderBracket('g2a','g2a-b');
+  renderBracket('b1a','b1a-b');
+  renderBracket('g1a','g1a-b');
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── AI REFRESH ───────────────────────────────────────────────────────────
+function setStatus(cls,msg){
+  const el=document.getElementById('rStatus');
+  el.innerHTML=`<span class="${cls}">${msg}</span>`;
+}
+
+function norm(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+
+function teamMatches(name,candidate){
+  const n=norm(name),c=norm(candidate);
+  if(!n||!c) return false;
+  return n===c||n.includes(c)||c.includes(n)||(c.length>4&&n.includes(c.slice(0,5)));
+}
+
+function applyParsedScores(scores){
+  freshGames.clear();
+  let count=0;
+  scores.forEach(s=>{
+    if(typeof s.sc1!=='number'||typeof s.sc2!=='number') return;
+    Object.values(ALL).forEach(bk=>{
+      Object.entries(bk.games).forEach(([gk,gm])=>{
+        if(gm.done) return;
+        if(!gm.t1||!gm.t2||gm.t1==='TBD'||gm.t2==='TBD') return;
+        const m12=teamMatches(s.t1,gm.t1)&&teamMatches(s.t2,gm.t2);
+        const m21=teamMatches(s.t1,gm.t2)&&teamMatches(s.t2,gm.t1);
+        if(!m12&&!m21) return;
+        let sc1=s.sc1,sc2=s.sc2;
+        if(m21){[sc1,sc2]=[sc2,sc1];}
+        gm.sc1=sc1; gm.sc2=sc2;
+        gm.done=s.final!==false;
+        gm.w=gm.done?(sc1>sc2?1:2):null;
+        freshGames.add(gk);
+        count++;
+      });
+    });
+  });
+  return count;
+}
+
+
+// ── SCORE ENTRY ──────────────────────────────────────────────────────────
+var _modalBk=null, _modalGk=null;
+
+function openScoreModal(bkId, gk){
+  var gm=ALL[bkId].games[gk];
+  if(!gm||!gm.t1||!gm.t2||gm.t1==='TBD'||gm.t2==='TBD') return;
+  _modalBk=bkId; _modalGk=gk;
+  document.getElementById('modalTitle').textContent='Enter Score';
+  var sc1=typeof gm.sc1==='number'?gm.sc1:'';
+  var sc2=typeof gm.sc2==='number'?gm.sc2:'';
+  document.getElementById('modalTeams').innerHTML=
+    '<div class="trow"><label>'+(gm.s1||'')+'&nbsp;'+gm.t1+'</label><input id="inp1" type="number" min="0" max="199" value="'+sc1+'"></div>'+
+    '<div class="trow"><label>'+(gm.s2||'')+'&nbsp;'+gm.t2+'</label><input id="inp2" type="number" min="0" max="199" value="'+sc2+'"></div>';
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(function(){document.getElementById('inp1').focus();},100);
+}
+
+function closeModal(){
+  document.getElementById('modalBg').classList.remove('open');
+  _modalBk=null; _modalGk=null;
+}
+
+function saveModal(){
+  if(!_modalBk||!_modalGk) return;
+  var v1=parseInt(document.getElementById('inp1').value);
+  var v2=parseInt(document.getElementById('inp2').value);
+  if(isNaN(v1)||isNaN(v2)||v1<0||v2<0){toast('Enter valid scores for both teams');return;}
+  var gm=ALL[_modalBk].games[_modalGk];
+  gm.sc1=v1; gm.sc2=v2; gm.done=true; gm.w=v1>v2?1:2;
+  freshGames.add(_modalGk);
+  closeModal();
+  renderAll();
+  var t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  document.getElementById('lastUpdateTime').textContent='Updated @ '+t;
+  toast('Score saved!');
+  setTimeout(function(){freshGames.clear();renderAll();},6000);
+}
+
+// Close modal on background click
+document.getElementById('modalBg').addEventListener('click', function(e){
+  if(e.target===this) closeModal();
+});
+
+// Allow Enter key to save
+document.addEventListener('keydown', function(e){
+  if(e.key==='Enter' && document.getElementById('modalBg').classList.contains('open')) saveModal();
+  if(e.key==='Escape') closeModal();
+});
+
+function setStatus(cls,msg){
+  // no-op — status bar removed
+}
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),4000);
+}
+
+// ─── AUTO-FETCH SCORES FROM NETLIFY FUNCTION ──────────────────────────────
+function applyServerScores(serverScores) {
+  // serverScores is a flat object: { "b2a-G17": {sc1, sc2, final}, ... }
+  let count = 0;
+  Object.entries(serverScores).forEach(([gameId, s]) => {
+    // gameId format: "b2a-G17" → bracket "b2a", game key "G17"
+    const dash = gameId.indexOf('-');
+    if (dash === -1) return;
+    const bkId = gameId.slice(0, dash);
+    const gk = gameId.slice(dash + 1);
+    const bk = ALL[bkId];
+    if (!bk) return;
+    const gm = bk.games[gk];
+    if (!gm) return;
+    if (typeof s.sc1 !== 'number' || typeof s.sc2 !== 'number') return;
+    gm.sc1 = s.sc1;
+    gm.sc2 = s.sc2;
+    gm.done = s.final !== false;
+    gm.w = gm.done ? (s.sc1 > s.sc2 ? 1 : 2) : null;
+    freshGames.add(gk);
+    count++;
+  });
+  return count;
+}
+
+async function fetchScores() {
+  try {
+    const r = await fetch('/api/scores', { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.scores || Object.keys(data.scores).length === 0) return;
+    const count = applyServerScores(data.scores);
+    if (count > 0) {
+      renderAll();
+      const t = data.updated
+        ? new Date(data.updated).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        : new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      document.getElementById('lastUpdateTime').textContent = 'Scores updated @ ' + t;
+      setTimeout(() => { freshGames.clear(); renderAll(); }, 6000);
+    }
+  } catch (e) {
+    // silent fail — hardcoded scores still show
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+renderAll();
+// Fetch live scores immediately, then every 2 minutes
+fetchScores();
+setInterval(fetchScores, 2 * 60 * 1000);
+</script>
+</body>
+</html>
