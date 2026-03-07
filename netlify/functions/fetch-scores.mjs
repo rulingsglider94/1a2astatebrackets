@@ -1,6 +1,5 @@
 // netlify/functions/fetch-scores.mjs
-// Called by the frontend every 2 minutes via /api/scores.
-// Fetches all 4 CHSAA bracket pages, parses completed game scores, returns JSON.
+// Fetches all 4 CHSAA bracket pages live and returns parsed scores as JSON.
 
 const SOURCES = {
   b2a: "https://chsaa.co/basketball/2026/boys/2A",
@@ -9,60 +8,58 @@ const SOURCES = {
   g1a: "https://chsaa.co/basketball/2026/girls/1A",
 };
 
-// ─── PARSER ───────────────────────────────────────────────────────────────
-// CHSAA renders each game as an anchor block. Plain text after stripping tags:
-//
-//   PLAYED:     "1 Sanford 69 32 Ridgway 26"       → seed score seed score
-//   NOT PLAYED: "8 Merino 9 Limon"                 → only 2 numbers (seeds)
-//               "29 Akron W6"                       → W-placeholder present
-//               "6 Prairie 11 Peetz"                → only seeds, no scores
-//
-// Pattern: seed(1-32)  score(≥10)  seed(1-32)  score(≥10), scores differ.
-
 function parseChsaaPage(html, bracketKey) {
   const results = {};
   if (!html) return results;
 
   const gameLinkRe = /<a[^>]+href="\/basketball\/2026\/(?:boys|girls)\/[^"]+\/(\d+)\/[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+
   let match;
   while ((match = gameLinkRe.exec(html)) !== null) {
-    const gameNum = parseInt(match[1], 10);
+    const chsaaGameNum = parseInt(match[1], 10);
     const text = match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
     const scores = extractScores(text);
     if (scores) {
-      results[`${bracketKey}-G${gameNum}`] = { sc1: scores.sc1, sc2: scores.sc2, final: true };
+      const key = `${bracketKey}-G${chsaaGameNum}`;
+      results[key] = { sc1: scores.sc1, sc2: scores.sc2, final: true };
     }
   }
+
   return results;
 }
 
 function extractScores(text) {
-  // Reject any game with W-placeholders (not yet played)
+  // Skip unplayed games — CHSAA uses "W1", "W2" etc. as TBD placeholders
   if (/\bW\d+\b/i.test(text)) return null;
 
-  // Extract all numbers 1–150 (covers seeds 1-32 and basketball scores)
-  const nums = [...text.matchAll(/\b(\d+)\b/g)]
-    .map(m => parseInt(m[1], 10))
-    .filter(n => n >= 1 && n <= 150);
+  // Strip date and time patterns BEFORE scanning for numbers.
+  // Without this, "12:30P" injects 12 and 30 into the number stream,
+  // which causes them to be mistaken for scores.
+  let clean = text;
+  clean = clean.replace(/\b\d{1,2}\/\d{1,2}\b/g, "");          // e.g. 3/6, 3/12
+  clean = clean.replace(/\b\d{1,2}:\d{2}\s*[APap][Mm]?\b/g, ""); // e.g. 11:00A, 2:30PM
 
-  // Need at least 4 numbers for seed/score/seed/score pattern
+  const nums = [...clean.matchAll(/\b(\d+)\b/g)].map(m => parseInt(m[1], 10));
   if (nums.length < 4) return null;
 
-  // Scan for the pattern: a(seed) b(score) c(seed) d(score)
+  // Scan for pattern: seed(1-32) score(>=10) seed(1-32) score(>=10)
+  // At least one score must exceed 32 so we can distinguish it from a seed.
   for (let i = 0; i <= nums.length - 4; i++) {
     const [a, b, c, d] = nums.slice(i, i + 4);
     if (!(1 <= a && a <= 32)) continue;   // a must be a seed
     if (!(1 <= c && c <= 32)) continue;   // c must be a seed
     if (b < 10 || d < 10) continue;       // scores must be >= 10
-    if (b === d) continue;                 // scores must differ (no ties)
-    if (b <= 32 && b === c) continue;     // b looks like seed2, not score1
-    if (d <= 32 && d === a) continue;     // d looks like seed1, not score2
+    if (b === d) continue;                 // no ties
+    if (b <= 32 && d <= 32) continue;     // at least one score must beat seed range
+    if (b === c) continue;                 // score can't equal next seed
+    if (d === a) continue;                 // score can't equal prior seed
     return { sc1: b, sc2: d };
   }
+
   return null;
 }
 
-// ─── HTTP FETCH WITH RETRIES ──────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function fetchPage(url) {
@@ -72,32 +69,32 @@ async function fetchPage(url) {
       const timer = setTimeout(() => controller.abort(), 12000);
       const r = await fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; CHSAABracketBot/2.0)",
-          "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+          "User-Agent": "Mozilla/5.0 (compatible; CHSAABracketBot/2.0; +https://1a2astatebrackets.netlify.app)",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
           "Cache-Control": "no-cache",
         },
         signal: controller.signal,
       });
       clearTimeout(timer);
       if (!r.ok) {
+        console.warn(`HTTP ${r.status} for ${url} (attempt ${attempt})`);
         if (attempt < 3) await sleep(2000 * attempt);
         continue;
       }
       return await r.text();
     } catch (e) {
+      console.warn(`Fetch failed ${url} (attempt ${attempt}): ${e.message}`);
       if (attempt < 3) await sleep(2000 * attempt);
     }
   }
+  console.error(`All retries failed for ${url}`);
   return "";
 }
 
-// ─── HANDLER ──────────────────────────────────────────────────────────────
-export default async (req, context) => {
-  const headers = {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Cache-Control": "no-cache",
-  };
+export const handler = async () => {
+  console.log("fetch-scores START", new Date().toISOString());
+
   try {
     const [b2aHtml, g2aHtml, b1aHtml, g1aHtml] = await Promise.all([
       fetchPage(SOURCES.b2a),
@@ -105,20 +102,29 @@ export default async (req, context) => {
       fetchPage(SOURCES.b1a),
       fetchPage(SOURCES.g1a),
     ]);
+
+    console.log("Page sizes:", {
+      b2a: b2aHtml.length, g2a: g2aHtml.length,
+      b1a: b1aHtml.length, g1a: g1aHtml.length,
+    });
+
     const scores = {
       ...parseChsaaPage(b2aHtml, "b2a"),
       ...parseChsaaPage(g2aHtml, "g2a"),
       ...parseChsaaPage(b1aHtml, "b1a"),
       ...parseChsaaPage(g1aHtml, "g1a"),
     };
-    const output = { updated: new Date().toISOString(), scores };
-    return new Response(JSON.stringify(output), { status: 200, headers });
+
+    const count = Object.keys(scores).length;
+    console.log(`Parsed ${count} completed games:`, JSON.stringify(scores));
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      body: JSON.stringify({ updated: new Date().toISOString(), scores }),
+    };
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message, scores: {}, updated: null }),
-      { status: 500, headers }
-    );
+    console.error("fetch-scores ERROR:", err);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
-
-export const config = { path: "/api/scores" };
