@@ -4,6 +4,3 @@
 
 [dev]
   publish = "public"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
