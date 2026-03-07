@@ -143,5 +143,5 @@ const handler = async () => {
   }
 };
 
-export { handler };
-export const config = { schedule: "*/5 * * * *" };
+const scheduledHandler = schedule("*/5 * * * *", handler);
+export { scheduledHandler as handler };
