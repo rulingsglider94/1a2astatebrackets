@@ -361,9 +361,16 @@ function propagate(bk){
   bk.adv.forEach(([from,,to,slot])=>{
     const src=bk.games[from]; if(!src||src.w===null) return;
     const dst=bk.games[to];   if(!dst) return;
-    const w=src.w===1?{t:src.t1,s:src.s1}:{t:src.t2,s:src.s2};
-    if(slot===1){if(!dst.t1||dst.t1==='TBD'){dst.t1=w.t;dst.s1=w.s;}}
-    else        {if(!dst.t2||dst.t2==='TBD'){dst.t2=w.t;dst.s2=w.s;}}
+    const winner=src.w===1?src.t1:src.t2;
+    // Always push winner name forward so bracket auto-advances
+    if(slot===1){ dst.t1=winner; }
+    else        { dst.t2=winner; }
+    // Recompute done/w on destination if both teams now known and scores present
+    if(dst.t1&&dst.t1!=='TBD'&&dst.t2&&dst.t2!=='TBD'){
+      if(typeof dst.sc1==='number'&&typeof dst.sc2==='number'){
+        dst.done=true; dst.w=dst.sc1>dst.sc2?1:2;
+      }
+    }
   });
 }
 
@@ -555,26 +562,33 @@ function toast(msg){
 
 // ─── AUTO-FETCH SCORES FROM NETLIFY FUNCTION ──────────────────────────────
 function applyServerScores(serverScores) {
-  // serverScores is a flat object: { "b2a-G17": {sc1, sc2, final}, ... }
+  // serverScores: { "b2a-G17": {sc1, sc2, final}, ... }
+  // Applies scores AND auto-advances winners through the bracket.
   let count = 0;
   Object.entries(serverScores).forEach(([gameId, s]) => {
-    // gameId format: "b2a-G17" → bracket "b2a", game key "G17"
     const dash = gameId.indexOf('-');
     if (dash === -1) return;
     const bkId = gameId.slice(0, dash);
-    const gk = gameId.slice(dash + 1);
-    const bk = ALL[bkId];
+    const gk   = gameId.slice(dash + 1);
+    const bk   = ALL[bkId];
     if (!bk) return;
     const gm = bk.games[gk];
     if (!gm) return;
     if (typeof s.sc1 !== 'number' || typeof s.sc2 !== 'number') return;
-    gm.sc1 = s.sc1;
-    gm.sc2 = s.sc2;
+    if (gm.done && gm.sc1 === s.sc1 && gm.sc2 === s.sc2) return;
+    gm.sc1  = s.sc1;
+    gm.sc2  = s.sc2;
     gm.done = s.final !== false;
-    gm.w = gm.done ? (s.sc1 > s.sc2 ? 1 : 2) : null;
+    gm.w    = gm.done ? (s.sc1 > s.sc2 ? 1 : 2) : null;
     freshGames.add(gk);
     count++;
   });
+  // Propagate winners forward through all rounds for every bracket
+  if (count > 0) {
+    Object.values(ALL).forEach(bk => {
+      for (let i = 0; i < 5; i++) propagate(bk);
+    });
+  }
   return count;
 }
 
@@ -588,19 +602,18 @@ async function fetchScores() {
     if (count > 0) {
       renderAll();
       const t = data.updated
-        ? new Date(data.updated).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-        : new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      document.getElementById('lastUpdateTime').textContent = 'Scores updated @ ' + t;
+        ? new Date(data.updated).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'})
+        : new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+      document.getElementById('lastUpdateTime').textContent = 'Live @ ' + t;
       setTimeout(() => { freshGames.clear(); renderAll(); }, 6000);
     }
   } catch (e) {
-    // silent fail — hardcoded scores still show
+    // Silent fail — hardcoded scores still display
   }
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
 renderAll();
-// Fetch live scores immediately, then every 2 minutes
 fetchScores();
 setInterval(fetchScores, 2 * 60 * 1000);
 </script>
