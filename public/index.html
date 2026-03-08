@@ -547,7 +547,7 @@ function applyServerScores(serverScores) {
 
 async function fetchScores() {
   try {
-    const r = await fetch('/api/scores', { cache: 'no-store' });
+    const r = await fetch('/.netlify/functions/fetch-scores', { cache: 'no-store' });
     if (!r.ok) return;
     const data = await r.json();
     // FIX: always call applyServerScores (even if scores empty) and always renderAll,
