@@ -344,8 +344,9 @@ function propagate(bk){
     const src=bk.games[from]; if(!src||src.w===null) return;
     const dst=bk.games[to];   if(!dst) return;
     const winner=src.w===1?src.t1:src.t2;
-    if(slot===1){ dst.t1=winner; }
-    else        { dst.t2=winner; }
+    const winSeed=src.w===1?src.s1:src.s2;
+    if(slot===1){ dst.t1=winner; dst.s1=winSeed; }
+    else        { dst.t2=winner; dst.s2=winSeed; }
     if(dst.t1&&dst.t1!=='TBD'&&dst.t2&&dst.t2!=='TBD'){
       if(typeof dst.sc1==='number'&&typeof dst.sc2==='number'){
         dst.done=true; dst.w=dst.sc1>dst.sc2?1:2;
