@@ -4,3 +4,8 @@
 
 [dev]
   publish = "public"
+
+[[redirects]]
+  from = "/api/scores"
+  to = "/.netlify/functions/fetch-scores"
+  status = 200
