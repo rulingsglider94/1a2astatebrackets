@@ -28,19 +28,18 @@ function parseChsaaPage(html, bracketKey) {
     const text = match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     const key = `${bracketKey}-G${chsaaGameNum}`;
 
-    // Unplayed game — try to extract a scheduled time
-    if (/\bW\d+\b/i.test(text)) {
-      const time = extractGameTime(text);
-      if (time) {
-        results[key] = { time };
-      }
-      continue;
-    }
-
     // Played game — extract scores
     const scores = extractScores(text);
     if (scores) {
       results[key] = { sc1: scores.sc1, sc2: scores.sc2, final: true };
+      continue;
+    }
+
+    // Unplayed game — try to extract a scheduled time regardless of
+    // whether CHSAA shows W-placeholders or real team names
+    const time = extractGameTime(text);
+    if (time) {
+      results[key] = { time };
     }
   }
   return results;
