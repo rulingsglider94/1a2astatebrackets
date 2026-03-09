@@ -491,6 +491,10 @@ function applyServerScores(serverScores) {
     if (!bk) return;
     const gm = bk.games[gk];
     if (!gm) return;
+    // Apply game time for unplayed games even if no scores yet
+    if (s.time && !gm.done) {
+      gm.time = s.time;
+    }
     if (typeof s.sc1 !== 'number' || typeof s.sc2 !== 'number') return;
     if (gm.done) return; // never overwrite a completed game
     gm.sc1  = s.sc1;
